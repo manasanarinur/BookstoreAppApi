@@ -5,18 +5,19 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
 using AutoMapper;
+
 using AutoMapper.QueryableExtensions;
+using Microsoft.AspNetCore.Authorization;
 using BookStoreApi.API.Models.Book;
 using BookStoreApi.API.Data;
-using Microsoft.AspNetCore.Authorization;
 
-namespace BookStoreApi.API.Controllers
+namespace BookStoreApp.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles ="Administrator")]
-
+    [Authorize]
     public class BooksController : ControllerBase
     {
         private readonly BookStoreDbContext _context;
@@ -100,7 +101,7 @@ namespace BookStoreApi.API.Controllers
         // POST: api/Books
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = "Administrator")]
         public async Task<ActionResult<BookCreateDto>> PostBook(BookCreateDto bookDto)
         {
             var book = mapper.Map<Book>(bookDto);

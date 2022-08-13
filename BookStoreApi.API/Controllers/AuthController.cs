@@ -11,21 +11,19 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace BookStoreApi.API.Controllers
+namespace BookStoreApp.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [AllowAnonymous]
     public class AuthController : ControllerBase
     {
-        private ILogger<AuthController> logger;
+        private readonly ILogger<AuthController> logger;
         private readonly IMapper mapper;
         private readonly UserManager<ApiUser> userManager;
         private readonly IConfiguration configuration;
 
-        public object Configuration { get; private set; }
-
-        public AuthController(ILogger<AuthController> logger,IMapper mapper,UserManager<ApiUser>userManager,IConfiguration configuration)
+        public AuthController(ILogger<AuthController> logger, IMapper mapper, UserManager<ApiUser> userManager, IConfiguration configuration)
         {
             this.logger = logger;
             this.mapper = mapper;
@@ -35,13 +33,15 @@ namespace BookStoreApi.API.Controllers
 
         [HttpPost]
         [Route("register")]
-        public async Task<IActionResult>Register(UserDto userDto)
+        public async Task<IActionResult> Register(UserDto userDto)
         {
-            logger.LogInformation($"Registration Attempt for {userDto.Email}");
-            try {
+            logger.LogInformation($"Registration Attempt for {userDto.Email} ");
+            try
+            {
                 var user = mapper.Map<ApiUser>(userDto);
                 user.UserName = userDto.Email;
                 var result = await userManager.CreateAsync(user, userDto.Password);
+
                 if (result.Succeeded == false)
                 {
                     foreach (var error in result.Errors)
@@ -50,46 +50,48 @@ namespace BookStoreApi.API.Controllers
                     }
                     return BadRequest(ModelState);
                 }
-                
 
-                await userManager.CreateAsync(user, "User");
+                await userManager.AddToRoleAsync(user, "User");
                 return Accepted();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 logger.LogError(ex, $"Something Went Wrong in the {nameof(Register)}");
                 return Problem($"Something Went Wrong in the {nameof(Register)}", statusCode: 500);
             }
-            
         }
+
         [HttpPost]
         [Route("login")]
         public async Task<ActionResult<AuthResponse>> Login(LoginUserDto userDto)
         {
-            logger.LogInformation($"Login Attempt for {userDto.Email}");
+            logger.LogInformation($"Login Attempt for {userDto.Email} ");
             try
             {
                 var user = await userManager.FindByEmailAsync(userDto.Email);
                 var passwordValid = await userManager.CheckPasswordAsync(user, userDto.Password);
-                if(user==null||passwordValid==false)
+
+                if (user == null || passwordValid == false)
                 {
                     return Unauthorized(userDto);
                 }
+
                 string tokenString = await GenerateToken(user);
+
                 var response = new AuthResponse
                 {
                     Email = userDto.Email,
                     Token = tokenString,
                     UserId = user.Id,
                 };
+
                 return response;
-                
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 logger.LogError(ex, $"Something Went Wrong in the {nameof(Register)}");
                 return Problem($"Something Went Wrong in the {nameof(Register)}", statusCode: 500);
             }
-            
         }
 
         private async Task<string> GenerateToken(ApiUser user)
@@ -119,10 +121,8 @@ namespace BookStoreApi.API.Controllers
                 expires: DateTime.UtcNow.AddHours(Convert.ToInt32(configuration["JwtSettings:Duration"])),
                 signingCredentials: credentials
             );
+
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-
-
-
     }
 }
